@@ -133,7 +133,7 @@
         top: 7%;
         transform: translateX(-50%);
         border-radius: 50%;
-        background: radial-gradient(F
+        background: radial-gradient(
           circle,
           rgba(255, 226, 142, 0.18),
           transparent 68%
@@ -2524,7 +2524,11 @@
               );
             "
           >
-            <h2 id="answer-count" aria-live="polite">0 jawaban tersimpan</h2>
+            <div class="dashboard-actions" style="display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin-bottom:18px">
+              <h2 id="answer-count" aria-live="polite" style="margin:0">0 jawaban tersimpan</h2>
+              <button type="button" id="reset-reflections" class="canva-button" style="background:#9b3028;color:#fff7e8;border:2px solid #7e241f;border-radius:10px;padding:12px 18px;font-weight:800">🗑️ Reset Semua Data</button>
+            </div>
+            <p style="margin:0 0 18px;color:#8d3028;font-size:14px;font-weight:700">Perhatian: tombol reset menghapus seluruh jawaban refleksi dari database dan tidak dapat dibatalkan.</p>
             <div class="filters">
               <div>
                 <label
@@ -3072,6 +3076,38 @@
         $("dashboard-error").textContent = "";
         renderDashboard();
       }
+
+      async function resetAllReflections() {
+        const { data: sessionData, error: sessionError } = await supabaseClient.auth.getSession();
+        if (sessionError || !sessionData.session) {
+          alert("Sesi guru tidak ditemukan. Silakan login kembali.");
+          showTeacherLogin();
+          return;
+        }
+        if (!confirm("PERINGATAN: Anda akan menghapus SELURUH jawaban refleksi peserta didik dari database. Data yang dihapus tidak dapat dipulihkan. Yakin ingin melanjutkan?")) return;
+        if (!confirm("Konfirmasi terakhir: benar-benar hapus semua data refleksi?")) return;
+
+        const button = $("reset-reflections");
+        button.disabled = true;
+        button.textContent = "Menghapus data…";
+        $("dashboard-error").textContent = "";
+        try {
+          const { error } = await supabaseClient
+            .from("emotion_reflections")
+            .delete()
+            .gt("id", 0);
+          if (error) throw error;
+          await loadRecords();
+          alert("Semua data refleksi berhasil dihapus dari database.");
+        } catch (error) {
+          console.error("Gagal mereset data refleksi:", error);
+          $("dashboard-error").textContent = "Data gagal dihapus. Jalankan SQL pengaturan terbaru agar akun guru memiliki izin DELETE, lalu coba lagi.";
+        } finally {
+          button.disabled = false;
+          button.textContent = "🗑️ Reset Semua Data";
+        }
+      }
+      $("reset-reflections").addEventListener("click", resetAllReflections);
 
       const teacherLoginOverlay = $("teacher-login-overlay");
       function showTeacherLogin() {
